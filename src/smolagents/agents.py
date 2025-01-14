@@ -948,11 +948,9 @@ class CodeAgent(MultiStepAgent):
             )
         self.system_prompt = self.system_prompt.replace(
             "{{authorized_imports}}",
-            (
                 "You can import from any package you want."
                 if "*" in self.authorized_imports
                 else str(self.authorized_imports)
-            ),
         )
 
         if "*" in self.additional_authorized_imports:
