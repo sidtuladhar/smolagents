@@ -418,12 +418,30 @@ class MultiStepAgent:
 
         try:
             if isinstance(arguments, str):
-                if tool_name in self.managed_agents:
-                    observation = available_tools[tool_name].__call__(arguments)
+                if arguments.strip().startswith("{") and arguments.strip().endswith("}"):
+                    try:
+                        import json
+
+                        arguments = json.loads(arguments)
+                    except json.JSONDecodeError:
+                        pass
+                if isinstance(arguments, dict):
+                    for key, value in arguments.items():
+                        if isinstance(value, str) and value in self.state:
+                            arguments[key] = self.state[value]
+                    if tool_name in self.managed_agents:
+                        observation = available_tools[tool_name].__call__(**arguments)
+                    else:
+                        observation = available_tools[tool_name].__call__(
+                            **arguments, sanitize_inputs_outputs=True
+                        )
                 else:
-                    observation = available_tools[tool_name].__call__(
-                        arguments, sanitize_inputs_outputs=True
-                    )
+                    if tool_name in self.managed_agents:
+                        observation = available_tools[tool_name].__call__(arguments)
+                    else:
+                        observation = available_tools[tool_name].__call__(
+                            arguments, sanitize_inputs_outputs=True
+                        )
             elif isinstance(arguments, dict):
                 for key, value in arguments.items():
                     if isinstance(value, str) and value in self.state:
@@ -930,9 +948,11 @@ class CodeAgent(MultiStepAgent):
             )
         self.system_prompt = self.system_prompt.replace(
             "{{authorized_imports}}",
-            "You can import from any package you want."
-            if "*" in self.authorized_imports
-            else str(self.authorized_imports),
+            (
+                "You can import from any package you want."
+                if "*" in self.authorized_imports
+                else str(self.authorized_imports)
+            ),
         )
 
         if "*" in self.additional_authorized_imports:
