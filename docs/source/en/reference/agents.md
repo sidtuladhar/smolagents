@@ -35,7 +35,6 @@ We provide two types of agents, based on the main [`Agent`] class.
 
 Both require arguments `model` and list of tools `tools` at initialization.
 
-
 ### Classes of agents
 
 [[autodoc]] MultiStepAgent
@@ -43,7 +42,6 @@ Both require arguments `model` and list of tools `tools` at initialization.
 [[autodoc]] CodeAgent
 
 [[autodoc]] ToolCallingAgent
-
 
 ### ManagedAgent
 
@@ -54,6 +52,9 @@ Both require arguments `model` and list of tools `tools` at initialization.
 [[autodoc]] stream_to_gradio
 
 ### GradioUI
+
+> [!TIP]
+> You must have `gradio` installed to use the UI. Please run `pip install smolagents[gradio]` if it's not the case.
 
 [[autodoc]] GradioUI
 
@@ -99,6 +100,9 @@ print(model([{"role": "user", "content": "Ok!"}], stop_sequences=["great"]))
 >>> What a
 ```
 
+> [!TIP]
+> You must have `transformers` and `torch` installed on your machine. Please run `pip install smolagents[transformers]` if it's not the case.
+
 [[autodoc]] TransformersModel
 
 ### HfApiModel
@@ -136,8 +140,47 @@ messages = [
   {"role": "user", "content": "No need to help, take it easy."},
 ]
 
-model = LiteLLMModel("anthropic/claude-3-5-sonnet-latest", temperature=0.2)
-print(model(messages, max_tokens=10))
+model = LiteLLMModel("anthropic/claude-3-5-sonnet-latest", temperature=0.2, max_tokens=10)
+print(model(messages))
 ```
 
 [[autodoc]] LiteLLMModel
+
+### OpenAIServerModel
+
+This class lets you call any OpenAIServer compatible model.
+Here's how you can set it (you can customise the `api_base` url to point to another server):
+```py
+from smolagents import OpenAIServerModel
+
+model = OpenAIServerModel(
+    model_id="gpt-4o",
+    api_base="https://api.openai.com/v1",
+    api_key=os.environ["OPENAI_API_KEY"],
+)
+```
+
+[[autodoc]] OpenAIServerModel
+
+### AzureOpenAIServerModel
+
+`AzureOpenAIServerModel` allows you to connect to any Azure OpenAI deployment. 
+
+Below you can find an example of how to set it up, note that you can omit the `azure_endpoint`, `api_key`, and `api_version` arguments, provided you've set the corresponding environment variables -- `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`, and `OPENAI_API_VERSION`.
+
+Pay attention to the lack of an `AZURE_` prefix for `OPENAI_API_VERSION`, this is due to the way the underlying [openai](https://github.com/openai/openai-python) package is designed. 
+
+```py
+import os
+
+from smolagents import AzureOpenAIServerModel
+
+model = AzureOpenAIServerModel(
+    model_id = os.environ.get("AZURE_OPENAI_MODEL"),
+    azure_endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT"),
+    api_key=os.environ.get("AZURE_OPENAI_API_KEY"),
+    api_version=os.environ.get("OPENAI_API_VERSION")    
+)
+```
+
+[[autodoc]] AzureOpenAIServerModel

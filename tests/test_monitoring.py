@@ -22,11 +22,12 @@ from smolagents import (
     ToolCallingAgent,
     stream_to_gradio,
 )
-from huggingface_hub import (
-    ChatCompletionOutputMessage,
-    ChatCompletionOutputToolCall,
-    ChatCompletionOutputFunctionDefinition,
+from smolagents.models import (
+    ChatMessage,
+    ChatMessageToolCall,
+    ChatMessageToolCallDefinition,
 )
+from smolagents.utils import AgentLogger, LogLevel
 
 
 class FakeLLMModel:
@@ -36,21 +37,19 @@ class FakeLLMModel:
 
     def __call__(self, prompt, tools_to_call_from=None, **kwargs):
         if tools_to_call_from is not None:
-            return ChatCompletionOutputMessage(
+            return ChatMessage(
                 role="assistant",
                 content="",
                 tool_calls=[
-                    ChatCompletionOutputToolCall(
+                    ChatMessageToolCall(
                         id="fake_id",
                         type="function",
-                        function=ChatCompletionOutputFunctionDefinition(
-                            name="final_answer", arguments={"answer": "image"}
-                        ),
+                        function=ChatMessageToolCallDefinition(name="final_answer", arguments={"answer": "image"}),
                     )
                 ],
             )
         else:
-            return ChatCompletionOutputMessage(
+            return ChatMessage(
                 role="assistant",
                 content="""
 Code:
@@ -91,9 +90,7 @@ class MonitoringTester(unittest.TestCase):
                 self.last_output_token_count = 20
 
             def __call__(self, prompt, **kwargs):
-                return ChatCompletionOutputMessage(
-                    role="assistant", content="Malformed answer"
-                )
+                return ChatMessage(role="assistant", content="Malformed answer")
 
         agent = CodeAgent(
             tools=[],
@@ -124,9 +121,7 @@ class MonitoringTester(unittest.TestCase):
         )
         agent.run("Fake task")
 
-        self.assertEqual(
-            agent.monitor.total_input_token_count, 20
-        )  # Should have done two monitoring callbacks
+        self.assertEqual(agent.monitor.total_input_token_count, 20)  # Should have done two monitoring callbacks
         self.assertEqual(agent.monitor.total_output_token_count, 0)
 
     def test_streaming_agent_text_output(self):
@@ -137,7 +132,7 @@ class MonitoringTester(unittest.TestCase):
         )
 
         # Use stream_to_gradio to capture the output
-        outputs = list(stream_to_gradio(agent, task="Test task", test_mode=True))
+        outputs = list(stream_to_gradio(agent, task="Test task"))
 
         self.assertEqual(len(outputs), 4)
         final_message = outputs[-1]
@@ -157,7 +152,6 @@ class MonitoringTester(unittest.TestCase):
                 agent,
                 task="Test task",
                 additional_args=dict(image=AgentImage(value="path.png")),
-                test_mode=True,
             )
         )
 
@@ -169,8 +163,10 @@ class MonitoringTester(unittest.TestCase):
         self.assertEqual(final_message.content["mime_type"], "image/png")
 
     def test_streaming_with_agent_error(self):
+        logger = AgentLogger(level=LogLevel.INFO)
+
         def dummy_model(prompt, **kwargs):
-            raise AgentError("Simulated agent error")
+            raise AgentError("Simulated agent error", logger)
 
         agent = CodeAgent(
             tools=[],
@@ -179,7 +175,7 @@ class MonitoringTester(unittest.TestCase):
         )
 
         # Use stream_to_gradio to capture the output
-        outputs = list(stream_to_gradio(agent, task="Test task", test_mode=True))
+        outputs = list(stream_to_gradio(agent, task="Test task"))
 
         self.assertEqual(len(outputs), 5)
         final_message = outputs[-1]
