@@ -965,7 +965,7 @@ class ManagedAgent:
 
     def __call__(self, request, **kwargs):
         full_task = self.write_full_task(request)
-        output = self.agent.run(full_task, **kwargs)
+        output = self.agent.run(full_task, additional_args=kwargs)
         if self.provide_run_summary:
             answer = f"Here is the final answer from your managed agent '{self.name}':\n"
             answer += str(output)
